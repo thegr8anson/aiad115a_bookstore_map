@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台灣獨立書店地圖 | 巷弄裡的紙本溫度</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- Google Fonts: 襯線與黑體搭配 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-paper: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --text-main: #2C2621;
+      --text-muted: #796E65;
+      --border-color: #E8E2D9;
+      --accent: #B3541E;
+      --accent-hover: #964213;
+      --sidebar-width: 400px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      font-family: 'Noto Sans TC', sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-paper);
+      overflow: hidden;
+    }
+
+    /* 側邊欄樣式 */
+    #sidebar {
+      width: var(--sidebar-width);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-paper);
+      border-right: 1px solid var(--border-color);
+      box-shadow: 2px 0 12px rgba(44, 38, 33, 0.04);
+      z-index: 1000;
+    }
+
+    .header-panel {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-paper);
+    }
+
+    .brand-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* 控制面板（搜尋、篩選、隨機按鈕） */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      background: var(--bg-card);
+      color: var(--text-main);
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .city-select {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--bg-card);
+      color: var(--text-main);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .random-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .random-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .stats-bar {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 書店清單 */
+    #store-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .store-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .store-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(44, 38, 33, 0.06);
+    }
+
+    .store-card.active {
+      border-color: var(--accent);
+      background: #FFFDF9;
+      box-shadow: 0 0 0 2px rgba(179, 84, 30, 0.2);
+    }
+
+    .card-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .card-city {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      background: #EFEBE4;
+      color: var(--text-muted);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .card-address {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .card-time {
+      font-size: 12px;
+      color: #92857A;
+    }
+
+    /* 狀態提示容器（Loading / Error / Empty） */
+    .status-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      gap: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-icon {
+      font-size: 32px;
+    }
+
+    .retry-btn {
+      margin-top: 8px;
+      padding: 8px 18px;
+      background: var(--text-main);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .retry-btn:hover {
+      background: #000;
+    }
+
+    /* 右側滿版地圖 */
+    #map {
+      flex: 1;
+      height: 100%;
+    }
+
+    /* OpenStreetMap 暖柔紙本色調微調 */
+    .leaflet-tile-pane {
+      filter: saturate(0.85) sepia(0.08) contrast(0.95);
+    }
+
+    /* Leaflet Popup 溫潤紙本調性自訂 */
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-paper);
+      color: var(--text-main);
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(44, 38, 33, 0.15);
+      border: 1px solid var(--border-color);
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    .leaflet-popup-content {
+      margin: 14px 16px;
+      line-height: 1.5;
+    }
+
+    .popup-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+    }
+
+    .popup-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .popup-intro {
+      font-size: 12px;
+      color: var(--text-main);
+      margin-top: 8px;
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    /* 響應式佈局 */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column-reverse;
+      }
+      #sidebar {
+        width: 100%;
+        height: 50vh;
+      }
+      #map {
+        height: 50vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 左側控制與清單欄 -->
+  <aside id="sidebar">
+    <div class="header-panel">
+      <div class="brand-title">
+        <span>📖</span> 全台獨立書店地圖
+      </div>
+      <div class="brand-subtitle">拾起一本書，走進巷弄裡的專注時刻</div>
+
+      <div class="controls">
+        <div class="search-row">
+          <input type="text" id="searchInput" class="search-input" placeholder="搜尋書店名稱或地址..." />
+          <select id="citySelect" class="city-select">
+            <option value="all">全台灣</option>
+          </select>
+        </div>
+        <button id="randomBtn" class="random-btn">
+          <span>✨</span> 遇見下一間書店（漫遊）
+        </button>
+      </div>
+
+      <div class="stats-bar">
+        <span id="resultCount">載入中...</span>
+        <span>資料來源：文化部</span>
+      </div>
+    </div>
+
+    <div id="store-list">
+      <!-- 狀態或清單卡片由 JavaScript 動態注入 -->
+    </div>
+  </aside>
+
+  <!-- 右側地圖 -->
+  <div id="map"></div>
+
+  <!-- Leaflet JS & MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const API_URL = 'https://cloud.culture.tw/frontsite/trans/emapOpenDataAction.do?method=exportEmapJson&typeId=M';
+
+    // 應用程式狀態
+    let allStores = [];
+    let filteredStores = [];
+    let markersMap = new Map();
+
+    // 1. 初始化地圖（預設聚焦台灣中心，縮放層級 8）
+    const map = L.map('map', {
+      zoomControl: true
+    }).setView([23.8, 120.9], 8);
+
+    // 載入 OpenStreetMap (OSM) 標準圖磚
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者',
+      maxZoom: 19
+    }).addTo(map);
+
+    // 建立 MarkerCluster 聚合群組
+    const markerClusterGroup = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 40
+    });
+    map.addLayer(markerClusterGroup);
+
+    // DOM 節點
+    const listContainer = document.getElementById('store-list');
+    const searchInput = document.getElementById('searchInput');
+    const citySelect = document.getElementById('citySelect');
+    const randomBtn = document.getElementById('randomBtn');
+    const resultCount = document.getElementById('resultCount');
+
+    // 2. 獲取並清洗 API 資料
+    async function fetchBookstores() {
+      renderLoading();
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`伺服器回應異常: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // 清洗資料：剔除經緯度無效者，整理成標準結構
+        allStores = data
+          .filter(item => item.latitude && item.longitude && !isNaN(parseFloat(item.latitude)) && !isNaN(parseFloat(item.longitude)))
+          .map((item, index) => ({
+            id: index,
+            name: item.name || '未命名書店',
+            cityName: (item.cityName || '其他').trim(),
+            address: item.address || '無地址資料',
+            openTime: item.openTime || '無營業時間資訊',
+            intro: item.intro || '',
+            lat: parseFloat(item.latitude),
+            lng: parseFloat(item.longitude)
+          }));
+
+        if (allStores.length === 0) {
+          throw new Error('未取得任何有效書店資料');
+        }
+
+        buildCityFilter();
+        applyFilter();
+      } catch (error) {
+        console.error('API 讀取失敗:', error);
+        renderError();
+      }
+    }
+
+    // 建立縣市下拉選單
+    function buildCityFilter() {
+      const cities = Array.from(new Set(allStores.map(s => s.cityName))).filter(Boolean).sort();
+      citySelect.innerHTML = '<option value="all">全台灣</option>';
+      cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        citySelect.appendChild(opt);
+      });
+    }
+
+    // 3. 搜尋與地區過濾
+    function applyFilter() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      const selectedCity = citySelect.value;
+
+      filteredStores = allStores.filter(store => {
+        const matchCity = (selectedCity === 'all') || (store.cityName === selectedCity);
+        const matchKeyword = (!keyword) || 
+          store.name.toLowerCase().includes(keyword) || 
+          store.address.toLowerCase().includes(keyword);
+        return matchCity && matchKeyword;
+      });
+
+      resultCount.textContent = `共收錄 ${filteredStores.length} 間書店`;
+      renderMapMarkers();
+      renderStoreList();
+    }
+
+    // 4. 渲染地圖標記點
+    function renderMapMarkers() {
+      markerClusterGroup.clearLayers();
+      markersMap.clear();
+
+      filteredStores.forEach(store => {
+        const marker = L.marker([store.lat, store.lng]);
+
+        // 綁定 Popup 彈窗
+        const popupContent = `
+          <div class="popup-title">${escapeHTML(store.name)}</div>
+          <div class="popup-info">📍 ${escapeHTML(store.address)}</div>
+          <div class="popup-info">⏰ ${escapeHTML(store.openTime)}</div>
+          ${store.intro ? `<div class="popup-intro">${escapeHTML(store.intro)}</div>` : ''}
+        `;
+        marker.bindPopup(popupContent);
+
+        // Marker 點擊時同步高亮清單卡片
+        marker.on('click', () => {
+          highlightCard(store.id);
+        });
+
+        markerClusterGroup.addLayer(marker);
+        markersMap.set(store.id, marker);
+      });
+    }
+
+    // 5. 渲染側邊欄清單
+    function renderStoreList() {
+      listContainer.innerHTML = '';
+
+      if (filteredStores.length === 0) {
+        listContainer.innerHTML = `
+          <div class="status-container">
+            <div class="status-icon">🍃</div>
+            <p>沒有找到符合條件的書店</p>
+          </div>
+        `;
+        return;
+      }
+
+      filteredStores.forEach(store => {
+        const card = document.createElement('div');
+        card.className = 'store-card';
+        card.id = `card-${store.id}`;
+        card.innerHTML = `
+          <div class="card-title">${escapeHTML(store.name)}</div>
+          <span class="card-city">${escapeHTML(store.cityName)}</span>
+          <div class="card-address">${escapeHTML(store.address)}</div>
+          <div class="card-time">營業時間：${escapeHTML(store.openTime)}</div>
+        `;
+
+        card.addEventListener('click', () => {
+          focusStoreOnMap(store.id);
+        });
+
+        listContainer.appendChild(card);
+      });
+    }
+
+    // 點選卡片聚焦地圖
+    function focusStoreOnMap(storeId) {
+      const store = allStores.find(s => s.id === storeId);
+      const marker = markersMap.get(storeId);
+      if (!store || !marker) return;
+
+      highlightCard(storeId);
+
+      // 地圖平移縮放至座標並展開彈窗
+      map.flyTo([store.lat, store.lng], 16, { duration: 1.2 });
+      markerClusterGroup.zoomToShowLayer(marker, () => {
+        marker.openPopup();
+      });
+    }
+
+    // 高亮側邊欄卡片並滾動可見
+    function highlightCard(storeId) {
+      document.querySelectorAll('.store-card').forEach(c => c.classList.remove('active'));
+      const activeCard = document.getElementById(`card-${storeId}`);
+      if (activeCard) {
+        activeCard.classList.add('active');
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // 6. 隨機漫遊功能
+    function triggerRandomStore() {
+      const pool = filteredStores.length > 0 ? filteredStores : allStores;
+      if (pool.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      const randomStore = pool[randomIndex];
+
+      focusStoreOnMap(randomStore.id);
+    }
+
+    // 7. 狀態提示 (Loading / Error)
+    function renderLoading() {
+      resultCount.textContent = '載入中...';
+      listContainer.innerHTML = `
+        <div class="status-container">
+          <div class="status-icon">🍵</div>
+          <p>正在載入全台獨立書店資料...</p>
+        </div>
+      `;
+    }
+
+    function renderError() {
+      resultCount.textContent = '載入失敗';
+      listContainer.innerHTML = `
+        <div class="status-container">
+          <div class="status-icon">⚠️</div>
+          <p>無法連線至文化部開放資料 API<br><small style="color:#A09890;">（可能受網路或瀏覽器跨域存取限制）</small></p>
+          <button class="retry-btn" onclick="fetchBookstores()">重新連線</button>
+        </div>
+      `;
+    }
+
+    // 工具函式：防範 XSS
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 事件監聽綁定
+    searchInput.addEventListener('input', applyFilter);
+    citySelect.addEventListener('change', applyFilter);
+    randomBtn.addEventListener('click', triggerRandomStore);
+
+    // 啟動初始化
+    fetchBookstores();
+  </script>
+</body>
+</html>
