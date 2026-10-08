@@ -25,6 +25,8 @@
       --border-color: #E8E2D9;
       --accent: #B3541E;
       --accent-hover: #964213;
+      --warning-bg: #FDF4E7;
+      --warning-text: #8C5B0D;
       --sidebar-width: 400px;
     }
 
@@ -134,17 +136,6 @@
       margin-top: 8px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-    }
-
-    /* 座標校正狀態條 */
-    #geocodeStatus {
-      font-size: 11px;
-      color: var(--accent);
-      background: #FDF3ED;
-      padding: 2px 6px;
-      border-radius: 4px;
-      display: none;
     }
 
     #store-list {
@@ -199,12 +190,13 @@
       border-radius: 4px;
     }
 
-    .card-calibrated {
-      font-size: 10px;
+    .card-warning-tag {
+      font-size: 11px;
       padding: 2px 6px;
-      background: #EAF4EC;
-      color: #2E7D32;
+      background: var(--warning-bg);
+      color: var(--warning-text);
       border-radius: 4px;
+      border: 1px solid #F5E2C4;
     }
 
     .card-address {
@@ -267,6 +259,19 @@
       border-bottom: 1px solid var(--border-color);
       padding-bottom: 6px;
     }
+
+    /* 彈窗內的警示提示框 */
+    .popup-warning-box {
+      font-size: 11px;
+      background-color: var(--warning-bg);
+      color: var(--warning-text);
+      padding: 6px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      border: 1px solid #F5E2C4;
+    }
+
     .popup-info { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
     .popup-intro {
       font-size: 12px;
@@ -307,7 +312,7 @@
 
       <div class="stats-bar">
         <span id="resultCount">載入中...</span>
-        <span id="geocodeStatus">正在校正座標...</span>
+        <span>本地檔案載入</span>
       </div>
     </div>
 
@@ -322,7 +327,6 @@
 
   <script>
     const DATA_URL = './emapOpenDataAction.json';
-    const CACHE_STORAGE_KEY = 'GEOCODE_CACHE_V1';
 
     let allStores = [];
     let filteredStores = [];
@@ -348,26 +352,8 @@
     const citySelect = document.getElementById('citySelect');
     const randomBtn = document.getElementById('randomBtn');
     const resultCount = document.getElementById('resultCount');
-    const geocodeStatus = document.getElementById('geocodeStatus');
 
-    // 2. 本地快取讀取與寫入
-    function getGeocodeCache() {
-      try {
-        return JSON.parse(localStorage.getItem(CACHE_STORAGE_KEY)) || {};
-      } catch (e) {
-        return {};
-      }
-    }
-
-    function saveGeocodeCache(cache) {
-      try {
-        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
-      } catch (e) {
-        console.warn('快取寫入失敗（可能超過儲存上限）');
-      }
-    }
-
-    // 3. 獲取本地 JSON 資料並檢查假座標
+    // 2. 載入並解析本地 JSON 資料
     async function loadBookstores() {
       renderLoading();
       try {
@@ -375,9 +361,7 @@
         if (!response.ok) throw new Error(`無法讀取檔案 (${response.status})`);
         const data = await response.json();
 
-        const geoCache = getGeocodeCache();
-
-        // 統計座標重複次數，辨識哪些是「公版假經緯度」
+        // 統計座標重複次數，判定哪些是公版假座標
         const coordCount = new Map();
         data.forEach(item => {
           if (item.latitude && item.longitude) {
@@ -386,39 +370,36 @@
           }
         });
 
-        const geocodeQueue = [];
+        // 用於微幅散開重複點位（避開完全重疊成一團）
+        const coordOccurrences = new Map();
 
         allStores = data
-          .filter(item => (item.latitude && item.longitude) || item.address)
+          .filter(item => item.latitude && item.longitude && !isNaN(parseFloat(item.latitude)) && !isNaN(parseFloat(item.longitude)))
           .map((item, index) => {
             let rawCity = (item.cityName || '').trim();
             let cleanCity = rawCity.substring(0, 3) || '其他';
             
             let lat = parseFloat(item.latitude);
             let lng = parseFloat(item.longitude);
-            let isSuspicious = false;
 
-            const coordKey = (!isNaN(lat) && !isNaN(lng)) 
-              ? `${lat.toFixed(4)},${lng.toFixed(4)}` 
-              : 'missing';
+            const coordKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+            const totalCount = coordCount.get(coordKey) || 0;
+            const isApproximate = totalCount > 1; // 出現超過一次即標記為概略位置
 
-            // 若無經緯度，或該座標出現超過 1 次，判定為公版中心點假座標
-            if (isNaN(lat) || isNaN(lng) || (coordCount.get(coordKey) || 0) > 1) {
-              isSuspicious = true;
+            // 若為重複座標，進行微小半徑發散，避免點位完全黏在一起
+            if (isApproximate) {
+              const currentOccur = coordOccurrences.get(coordKey) || 0;
+              coordOccurrences.set(coordKey, currentOccur + 1);
+
+              if (currentOccur > 0) {
+                const angle = (currentOccur * 137.5) * (Math.PI / 180); // 黃金角均勻發散
+                const radius = 0.0003 * Math.sqrt(currentOccur); // 約偏移 30~50 公尺
+                lat += radius * Math.cos(angle);
+                lng += radius * Math.sin(angle);
+              }
             }
 
-            const cacheKey = `${cleanCity}_${item.address}`;
-            let calibrated = false;
-
-            // 優先讀取先前已轉換過的本地快取
-            if (geoCache[cacheKey]) {
-              lat = geoCache[cacheKey].lat;
-              lng = geoCache[cacheKey].lng;
-              calibrated = true;
-              isSuspicious = false;
-            }
-
-            const store = {
+            return {
               id: index,
               name: item.name || '未命名書店',
               cityName: cleanCity,
@@ -429,91 +410,20 @@
               image: item.representImage || '',
               lat: lat,
               lng: lng,
-              calibrated: calibrated
+              isApproximate: isApproximate // 是否為概略座標標記
             };
-
-            // 如果仍屬於可疑假座標，加入背景校正佇列
-            if (isSuspicious && store.address && store.address !== '無地址資料') {
-              geocodeQueue.push(store);
-            }
-
-            return store;
           });
+
+        if (allStores.length === 0) {
+          throw new Error('檔案內未包含含有有效經緯度的點位資料');
+        }
 
         buildCityFilter();
         applyFilter();
-
-        // 背景啟動逐一校正程序
-        if (geocodeQueue.length > 0) {
-          processGeocodeQueue(geocodeQueue);
-        }
       } catch (error) {
         console.error('資料載入失敗:', error);
         renderError();
       }
-    }
-
-    // 4. 背景非同步轉換地址至精準座標（呼叫 Nominatim API）
-    async function processGeocodeQueue(queue) {
-      geocodeStatus.style.display = 'inline-block';
-      const cache = getGeocodeCache();
-      let remaining = queue.length;
-
-      for (const store of queue) {
-        geocodeStatus.textContent = `校正假座標中 (${remaining} 剩餘)...`;
-
-        // 過濾樓層字眼，提升 OSM 地址匹配率
-        const cleanAddr = store.address.replace(/(?:\d+樓|\d+F|[A-Za-z]\d*樓|地下\d+層|B\d+)/gi, '').trim();
-        const query = `${store.cityName} ${cleanAddr}`.replace(/\s+/g, ' ');
-
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-          const res = await fetch(url);
-          const results = await res.json();
-
-          if (results && results.length > 0) {
-            const newLat = parseFloat(results[0].lat);
-            const newLng = parseFloat(results[0].lon);
-
-            // 更新記憶體中的店鋪物件
-            store.lat = newLat;
-            store.lng = newLng;
-            store.calibrated = true;
-
-            // 儲存至本地快取
-            const cacheKey = `${store.cityName}_${store.address}`;
-            cache[cacheKey] = { lat: newLat, lng: newLng };
-            saveGeocodeCache(cache);
-
-            // 動態更新地圖上的 Marker 位置
-            const marker = markersMap.get(store.id);
-            if (marker) {
-              marker.setLatLng([newLat, newLng]);
-            }
-
-            // 更新側邊欄標籤
-            const cardBadge = document.querySelector(`#card-${store.id} .card-calibrated`);
-            if (!cardBadge) {
-              const tagsContainer = document.querySelector(`#card-${store.id} .card-tags`);
-              if (tagsContainer) {
-                const b = document.createElement('span');
-                b.className = 'card-calibrated';
-                b.textContent = '📍 座標精確';
-                tagsContainer.appendChild(b);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`地址解析失敗 [${store.name}]:`, e);
-        }
-
-        remaining--;
-        // 嚴格遵守 OSM 規範：間隔 1.1 秒避免被拒絕服務
-        await new Promise(r => setTimeout(r, 1100));
-      }
-
-      geocodeStatus.textContent = '✓ 座標校正完畢';
-      setTimeout(() => { geocodeStatus.style.display = 'none'; }, 3000);
     }
 
     // 建立縣市下拉選單
@@ -528,18 +438,17 @@
       });
     }
 
-    // 5. 搜尋與地區過濾
+    // 3. 搜尋與地區過濾
     function applyFilter() {
       const keyword = searchInput.value.trim().toLowerCase();
       const selectedCity = citySelect.value;
 
       filteredStores = allStores.filter(store => {
-        const hasValidCoords = !isNaN(store.lat) && !isNaN(store.lng);
         const matchCity = (selectedCity === 'all') || (store.cityName === selectedCity);
         const matchKeyword = (!keyword) || 
           store.name.toLowerCase().includes(keyword) || 
           store.address.toLowerCase().includes(keyword);
-        return hasValidCoords && matchCity && matchKeyword;
+        return matchCity && matchKeyword;
       });
 
       resultCount.textContent = `共收錄 ${filteredStores.length} 間書店`;
@@ -547,7 +456,7 @@
       renderStoreList();
     }
 
-    // 6. 渲染地圖標記點
+    // 4. 渲染地圖標記點
     function renderMapMarkers() {
       markerClusterGroup.clearLayers();
       markersMap.clear();
@@ -557,9 +466,13 @@
 
         const imageHTML = store.image ? `<img src="${escapeHTML(store.image)}" class="popup-img" alt="${escapeHTML(store.name)}" onerror="this.style.display='none'">` : '';
         const phoneHTML = store.phone ? `<div class="popup-info">📞 ${escapeHTML(store.phone)}</div>` : '';
+        const warningHTML = store.isApproximate 
+          ? `<div class="popup-warning-box">⚠️ 本店因原始資料缺乏精確經緯度，地圖位置僅標示於行政區中心，可能不精確。</div>` 
+          : '';
 
         const popupContent = `
           ${imageHTML}
+          ${warningHTML}
           <div class="popup-title">${escapeHTML(store.name)}</div>
           <div class="popup-info">📍 ${escapeHTML(store.address)}</div>
           <div class="popup-info">⏰ ${escapeHTML(store.openTime)}</div>
@@ -577,7 +490,7 @@
       });
     }
 
-    // 7. 渲染側邊欄清單
+    // 5. 渲染側邊欄清單
     function renderStoreList() {
       listContainer.innerHTML = '';
 
@@ -599,7 +512,7 @@
           <div class="card-title">${escapeHTML(store.name)}</div>
           <div class="card-tags">
             <span class="card-city">${escapeHTML(store.cityName)}</span>
-            ${store.calibrated ? '<span class="card-calibrated">📍 座標精確</span>' : ''}
+            ${store.isApproximate ? '<span class="card-warning-tag">⚠️ 概略位置</span>' : ''}
           </div>
           <div class="card-address">${escapeHTML(store.address)}</div>
           <div class="card-time">營業時間：${escapeHTML(store.openTime)}</div>
