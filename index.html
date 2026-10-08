@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
-  <!-- Google Fonts: 襯線與黑體搭配 -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
@@ -28,11 +28,7 @@
       --sidebar-width: 400px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       display: flex;
@@ -43,7 +39,6 @@
       overflow: hidden;
     }
 
-    /* 側邊欄樣式 */
     #sidebar {
       width: var(--sidebar-width);
       height: 100%;
@@ -78,7 +73,6 @@
       margin-top: 4px;
     }
 
-    /* 控制面板 */
     .controls {
       display: flex;
       flex-direction: column;
@@ -103,9 +97,7 @@
       transition: border-color 0.2s;
     }
 
-    .search-input:focus {
-      border-color: var(--accent);
-    }
+    .search-input:focus { border-color: var(--accent); }
 
     .city-select {
       padding: 10px 12px;
@@ -134,9 +126,7 @@
       transition: background 0.2s;
     }
 
-    .random-btn:hover {
-      background: var(--accent-hover);
-    }
+    .random-btn:hover { background: var(--accent-hover); }
 
     .stats-bar {
       font-size: 12px;
@@ -144,9 +134,19 @@
       margin-top: 8px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
 
-    /* 書店清單 */
+    /* 座標校正狀態條 */
+    #geocodeStatus {
+      font-size: 11px;
+      color: var(--accent);
+      background: #FDF3ED;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: none;
+    }
+
     #store-list {
       flex: 1;
       overflow-y: auto;
@@ -185,14 +185,26 @@
       margin-bottom: 6px;
     }
 
+    .card-tags {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
     .card-city {
-      display: inline-block;
       font-size: 11px;
       padding: 2px 6px;
       background: #EFEBE4;
       color: var(--text-muted);
       border-radius: 4px;
-      margin-bottom: 8px;
+    }
+
+    .card-calibrated {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: #EAF4EC;
+      color: #2E7D32;
+      border-radius: 4px;
     }
 
     .card-address {
@@ -202,12 +214,8 @@
       margin-bottom: 6px;
     }
 
-    .card-time {
-      font-size: 12px;
-      color: #92857A;
-    }
+    .card-time { font-size: 12px; color: #92857A; }
 
-    /* 狀態提示容器 */
     .status-container {
       display: flex;
       flex-direction: column;
@@ -219,9 +227,7 @@
       color: var(--text-muted);
     }
 
-    .status-icon {
-      font-size: 32px;
-    }
+    .status-icon { font-size: 32px; }
 
     .retry-btn {
       margin-top: 8px;
@@ -234,22 +240,12 @@
       cursor: pointer;
     }
 
-    .retry-btn:hover {
-      background: #000;
-    }
+    #map { flex: 1; height: 100%; }
 
-    /* 右側滿版地圖 */
-    #map {
-      flex: 1;
-      height: 100%;
-    }
-
-    /* OpenStreetMap 暖柔紙本色調微調 */
     .leaflet-tile-pane {
       filter: saturate(0.85) sepia(0.08) contrast(0.95);
     }
 
-    /* Leaflet Popup 自訂風格 */
     .leaflet-popup-content-wrapper {
       background: var(--bg-paper);
       color: var(--text-main);
@@ -260,19 +256,8 @@
       max-width: 300px;
     }
 
-    .leaflet-popup-content {
-      margin: 14px 16px;
-      line-height: 1.5;
-    }
-
-    .popup-img {
-      width: 100%;
-      height: 140px;
-      object-fit: cover;
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-
+    .leaflet-popup-content { margin: 14px 16px; line-height: 1.5; }
+    .popup-img { width: 100%; height: 140px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; }
     .popup-title {
       font-family: 'Noto Serif TC', serif;
       font-size: 16px;
@@ -282,13 +267,7 @@
       border-bottom: 1px solid var(--border-color);
       padding-bottom: 6px;
     }
-
-    .popup-info {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
+    .popup-info { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
     .popup-intro {
       font-size: 12px;
       color: var(--text-main);
@@ -298,24 +277,15 @@
       line-height: 1.6;
     }
 
-    /* 響應式佈局 */
     @media (max-width: 768px) {
-      body {
-        flex-direction: column-reverse;
-      }
-      #sidebar {
-        width: 100%;
-        height: 50vh;
-      }
-      #map {
-        height: 50vh;
-      }
+      body { flex-direction: column-reverse; }
+      #sidebar { width: 100%; height: 50vh; }
+      #map { height: 50vh; }
     }
   </style>
 </head>
 <body>
 
-  <!-- 左側控制與清單欄 -->
   <aside id="sidebar">
     <div class="header-panel">
       <div class="brand-title">
@@ -337,14 +307,13 @@
 
       <div class="stats-bar">
         <span id="resultCount">載入中...</span>
-        <span>資料來源：文化部</span>
+        <span id="geocodeStatus">正在校正座標...</span>
       </div>
     </div>
 
     <div id="store-list"></div>
   </aside>
 
-  <!-- 右側地圖 -->
   <div id="map"></div>
 
   <!-- Leaflet JS & MarkerCluster JS -->
@@ -352,19 +321,16 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script>
-    // 指定同目錄下的實體 JSON 檔案路徑
     const DATA_URL = './emapOpenDataAction.json';
+    const CACHE_STORAGE_KEY = 'GEOCODE_CACHE_V1';
 
     let allStores = [];
     let filteredStores = [];
     let markersMap = new Map();
 
     // 1. 初始化地圖
-    const map = L.map('map', {
-      zoomControl: true
-    }).setView([23.8, 120.9], 8);
+    const map = L.map('map', { zoomControl: true }).setView([23.8, 120.9], 8);
 
-    // 載入 OpenStreetMap (OSM) 標準圖磚
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者',
       maxZoom: 19
@@ -382,26 +348,77 @@
     const citySelect = document.getElementById('citySelect');
     const randomBtn = document.getElementById('randomBtn');
     const resultCount = document.getElementById('resultCount');
+    const geocodeStatus = document.getElementById('geocodeStatus');
 
-    // 2. 獲取並清洗本地 JSON 資料
+    // 2. 本地快取讀取與寫入
+    function getGeocodeCache() {
+      try {
+        return JSON.parse(localStorage.getItem(CACHE_STORAGE_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveGeocodeCache(cache) {
+      try {
+        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
+      } catch (e) {
+        console.warn('快取寫入失敗（可能超過儲存上限）');
+      }
+    }
+
+    // 3. 獲取本地 JSON 資料並檢查假座標
     async function loadBookstores() {
       renderLoading();
       try {
         const response = await fetch(DATA_URL);
-        if (!response.ok) {
-          throw new Error(`無法讀取檔案 (${response.status})`);
-        }
+        if (!response.ok) throw new Error(`無法讀取檔案 (${response.status})`);
         const data = await response.json();
 
-        // 資料清洗與標準化
+        const geoCache = getGeocodeCache();
+
+        // 統計座標重複次數，辨識哪些是「公版假經緯度」
+        const coordCount = new Map();
+        data.forEach(item => {
+          if (item.latitude && item.longitude) {
+            const key = `${parseFloat(item.latitude).toFixed(4)},${parseFloat(item.longitude).toFixed(4)}`;
+            coordCount.set(key, (coordCount.get(key) || 0) + 1);
+          }
+        });
+
+        const geocodeQueue = [];
+
         allStores = data
-          .filter(item => item.latitude && item.longitude && !isNaN(parseFloat(item.latitude)) && !isNaN(parseFloat(item.longitude)))
+          .filter(item => (item.latitude && item.longitude) || item.address)
           .map((item, index) => {
-            // 縣市名稱清理：取前 3 碼縣市名（如「臺北市  大安區」轉為「臺北市」）
             let rawCity = (item.cityName || '').trim();
             let cleanCity = rawCity.substring(0, 3) || '其他';
+            
+            let lat = parseFloat(item.latitude);
+            let lng = parseFloat(item.longitude);
+            let isSuspicious = false;
 
-            return {
+            const coordKey = (!isNaN(lat) && !isNaN(lng)) 
+              ? `${lat.toFixed(4)},${lng.toFixed(4)}` 
+              : 'missing';
+
+            // 若無經緯度，或該座標出現超過 1 次，判定為公版中心點假座標
+            if (isNaN(lat) || isNaN(lng) || (coordCount.get(coordKey) || 0) > 1) {
+              isSuspicious = true;
+            }
+
+            const cacheKey = `${cleanCity}_${item.address}`;
+            let calibrated = false;
+
+            // 優先讀取先前已轉換過的本地快取
+            if (geoCache[cacheKey]) {
+              lat = geoCache[cacheKey].lat;
+              lng = geoCache[cacheKey].lng;
+              calibrated = true;
+              isSuspicious = false;
+            }
+
+            const store = {
               id: index,
               name: item.name || '未命名書店',
               cityName: cleanCity,
@@ -410,21 +427,93 @@
               intro: item.intro || '',
               phone: item.phone || '',
               image: item.representImage || '',
-              lat: parseFloat(item.latitude),
-              lng: parseFloat(item.longitude)
+              lat: lat,
+              lng: lng,
+              calibrated: calibrated
             };
-          });
 
-        if (allStores.length === 0) {
-          throw new Error('JSON 檔案內無含有有效經緯度的點位');
-        }
+            // 如果仍屬於可疑假座標，加入背景校正佇列
+            if (isSuspicious && store.address && store.address !== '無地址資料') {
+              geocodeQueue.push(store);
+            }
+
+            return store;
+          });
 
         buildCityFilter();
         applyFilter();
+
+        // 背景啟動逐一校正程序
+        if (geocodeQueue.length > 0) {
+          processGeocodeQueue(geocodeQueue);
+        }
       } catch (error) {
         console.error('資料載入失敗:', error);
         renderError();
       }
+    }
+
+    // 4. 背景非同步轉換地址至精準座標（呼叫 Nominatim API）
+    async function processGeocodeQueue(queue) {
+      geocodeStatus.style.display = 'inline-block';
+      const cache = getGeocodeCache();
+      let remaining = queue.length;
+
+      for (const store of queue) {
+        geocodeStatus.textContent = `校正假座標中 (${remaining} 剩餘)...`;
+
+        // 過濾樓層字眼，提升 OSM 地址匹配率
+        const cleanAddr = store.address.replace(/(?:\d+樓|\d+F|[A-Za-z]\d*樓|地下\d+層|B\d+)/gi, '').trim();
+        const query = `${store.cityName} ${cleanAddr}`.replace(/\s+/g, ' ');
+
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+          const res = await fetch(url);
+          const results = await res.json();
+
+          if (results && results.length > 0) {
+            const newLat = parseFloat(results[0].lat);
+            const newLng = parseFloat(results[0].lon);
+
+            // 更新記憶體中的店鋪物件
+            store.lat = newLat;
+            store.lng = newLng;
+            store.calibrated = true;
+
+            // 儲存至本地快取
+            const cacheKey = `${store.cityName}_${store.address}`;
+            cache[cacheKey] = { lat: newLat, lng: newLng };
+            saveGeocodeCache(cache);
+
+            // 動態更新地圖上的 Marker 位置
+            const marker = markersMap.get(store.id);
+            if (marker) {
+              marker.setLatLng([newLat, newLng]);
+            }
+
+            // 更新側邊欄標籤
+            const cardBadge = document.querySelector(`#card-${store.id} .card-calibrated`);
+            if (!cardBadge) {
+              const tagsContainer = document.querySelector(`#card-${store.id} .card-tags`);
+              if (tagsContainer) {
+                const b = document.createElement('span');
+                b.className = 'card-calibrated';
+                b.textContent = '📍 座標精確';
+                tagsContainer.appendChild(b);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`地址解析失敗 [${store.name}]:`, e);
+        }
+
+        remaining--;
+        // 嚴格遵守 OSM 規範：間隔 1.1 秒避免被拒絕服務
+        await new Promise(r => setTimeout(r, 1100));
+      }
+
+      geocodeStatus.textContent = '✓ 座標校正完畢';
+      setTimeout(() => { geocodeStatus.style.display = 'none'; }, 3000);
     }
 
     // 建立縣市下拉選單
@@ -439,17 +528,18 @@
       });
     }
 
-    // 3. 搜尋與地區過濾
+    // 5. 搜尋與地區過濾
     function applyFilter() {
       const keyword = searchInput.value.trim().toLowerCase();
       const selectedCity = citySelect.value;
 
       filteredStores = allStores.filter(store => {
+        const hasValidCoords = !isNaN(store.lat) && !isNaN(store.lng);
         const matchCity = (selectedCity === 'all') || (store.cityName === selectedCity);
         const matchKeyword = (!keyword) || 
           store.name.toLowerCase().includes(keyword) || 
           store.address.toLowerCase().includes(keyword);
-        return matchCity && matchKeyword;
+        return hasValidCoords && matchCity && matchKeyword;
       });
 
       resultCount.textContent = `共收錄 ${filteredStores.length} 間書店`;
@@ -457,7 +547,7 @@
       renderStoreList();
     }
 
-    // 4. 渲染地圖標記點
+    // 6. 渲染地圖標記點
     function renderMapMarkers() {
       markerClusterGroup.clearLayers();
       markersMap.clear();
@@ -487,7 +577,7 @@
       });
     }
 
-    // 5. 渲染側邊欄清單
+    // 7. 渲染側邊欄清單
     function renderStoreList() {
       listContainer.innerHTML = '';
 
@@ -507,7 +597,10 @@
         card.id = `card-${store.id}`;
         card.innerHTML = `
           <div class="card-title">${escapeHTML(store.name)}</div>
-          <span class="card-city">${escapeHTML(store.cityName)}</span>
+          <div class="card-tags">
+            <span class="card-city">${escapeHTML(store.cityName)}</span>
+            ${store.calibrated ? '<span class="card-calibrated">📍 座標精確</span>' : ''}
+          </div>
           <div class="card-address">${escapeHTML(store.address)}</div>
           <div class="card-time">營業時間：${escapeHTML(store.openTime)}</div>
         `;
@@ -520,21 +613,18 @@
       });
     }
 
-    // 聚焦地圖
     function focusStoreOnMap(storeId) {
       const store = allStores.find(s => s.id === storeId);
       const marker = markersMap.get(storeId);
       if (!store || !marker) return;
 
       highlightCard(storeId);
-
       map.flyTo([store.lat, store.lng], 16, { duration: 1.2 });
       markerClusterGroup.zoomToShowLayer(marker, () => {
         marker.openPopup();
       });
     }
 
-    // 高亮卡片
     function highlightCard(storeId) {
       document.querySelectorAll('.store-card').forEach(c => c.classList.remove('active'));
       const activeCard = document.getElementById(`card-${storeId}`);
@@ -544,24 +634,21 @@
       }
     }
 
-    // 6. 隨機漫遊功能
     function triggerRandomStore() {
       const pool = filteredStores.length > 0 ? filteredStores : allStores;
       if (pool.length === 0) return;
 
       const randomIndex = Math.floor(Math.random() * pool.length);
       const randomStore = pool[randomIndex];
-
       focusStoreOnMap(randomStore.id);
     }
 
-    // 7. 狀態提示
     function renderLoading() {
       resultCount.textContent = '載入中...';
       listContainer.innerHTML = `
         <div class="status-container">
           <div class="status-icon">🍵</div>
-          <p>正在載入全台獨立書店資料...</p>
+          <p>正在載入書店清單...</p>
         </div>
       `;
     }
@@ -577,7 +664,6 @@
       `;
     }
 
-    // 工具函式
     function escapeHTML(str) {
       if (!str) return '';
       return String(str)
@@ -588,12 +674,10 @@
         .replace(/'/g, '&#039;');
     }
 
-    // 事件監聽
     searchInput.addEventListener('input', applyFilter);
     citySelect.addEventListener('change', applyFilter);
     randomBtn.addEventListener('click', triggerRandomStore);
 
-    // 啟動載入
     loadBookstores();
   </script>
 </body>
